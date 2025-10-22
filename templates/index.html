@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KnowledgeMap Agent - 知识图谱智能体</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+        
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #4facfe;
+        }
+        
+        .entity, .relation {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 15px;
+            background: #e3f2fd;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        .relation {
+            background: #f3e5f5;
+        }
+        
+        .status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #e8f5e8;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        
+        .status-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 KnowledgeMap Agent</h1>
+            <p>基于Cursor大模型能力的知识图谱智能体</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- 智能体状态 -->
+            <div class="section">
+                <h2>📊 智能体状态</h2>
+                <div class="status" id="status">
+                    <div class="status-item">
+                        <div class="status-value" id="entity-count">-</div>
+                        <div class="status-label">实体数量</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="relation-count">-</div>
+                        <div class="status-label">关系数量</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="graph-status">-</div>
+                        <div class="status-label">图谱状态</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="loadStatus()">🔄 刷新状态</button>
+            </div>
+            
+            <!-- 知识提取 -->
+            <div class="section">
+                <h2>🔍 知识提取</h2>
+                <div class="form-group">
+                    <label for="text-input">输入文本：</label>
+                    <textarea id="text-input" placeholder="请输入要分析的文本，例如：人工智能是计算机科学的一个分支，机器学习是人工智能的核心技术..."></textarea>
+                </div>
+                <button class="btn" onclick="extractKnowledge()">🚀 开始提取</button>
+                
+                <div id="extract-results" class="results" style="display: none;">
+                    <h3>提取结果：</h3>
+                    <div id="entities-display"></div>
+                    <div id="relations-display"></div>
+                </div>
+            </div>
+            
+            <!-- 图谱查询 -->
+            <div class="section">
+                <h2>🔎 图谱查询</h2>
+                <div class="form-group">
+                    <label for="query-input">查询语句：</label>
+                    <input type="text" id="query-input" placeholder="例如：查询所有实体、查询关系等">
+                </div>
+                <button class="btn" onclick="queryGraph()">🔍 执行查询</button>
+                
+                <div id="query-results" class="results" style="display: none;">
+                    <h3>查询结果：</h3>
+                    <div id="query-display"></div>
+                </div>
+            </div>
+            
+            <!-- 图谱管理 -->
+            <div class="section">
+                <h2>💾 图谱管理</h2>
+                <button class="btn" onclick="saveGraph()">💾 保存图谱</button>
+                <button class="btn" onclick="loadGraph()">📂 加载图谱</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 加载智能体状态
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                
+                document.getElementById('entity-count').textContent = status.entity_count;
+                document.getElementById('relation-count').textContent = status.relation_count;
+                document.getElementById('graph-status').textContent = status.graph_status;
+                
+            } catch (error) {
+                console.error('加载状态失败:', error);
+            }
+        }
+        
+        // 提取知识
+        async function extractKnowledge() {
+            const text = document.getElementById('text-input').value.trim();
+            if (!text) {
+                alert('请输入要分析的文本');
+                return;
+            }
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ 处理中...';
+            
+            try {
+                const response = await fetch('/api/extract', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayExtractResults(result);
+                    loadStatus(); // 刷新状态
+                } else {
+                    showError('提取失败: ' + result.error);
+                }
+                
+            } catch (error) {
+                showError('请求失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 开始提取';
+            }
+        }
+        
+        // 显示提取结果
+        function displayExtractResults(result) {
+            const resultsDiv = document.getElementById('extract-results');
+            const entitiesDiv = document.getElementById('entities-display');
+            const relationsDiv = document.getElementById('relations-display');
+            
+            // 显示实体
+            entitiesDiv.innerHTML = '<h4>实体：</h4>';
+            result.entities.forEach(entity => {
+                const entityEl = document.createElement('span');
+                entityEl.className = 'entity';
+                entityEl.textContent = `${entity.name} (${entity.type})`;
+                entitiesDiv.appendChild(entityEl);
+            });
+            
+            // 显示关系
+            relationsDiv.innerHTML = '<h4>关系：</h4>';
+            result.relations.forEach(relation => {
+                const relationEl = document.createElement('span');
+                relationEl.className = 'relation';
+                relationEl.textContent = `${relation.source} → ${relation.target} (${relation.type})`;
+                relationsDiv.appendChild(relationEl);
+            });
+            
+            resultsDiv.style.display = 'block';
+        }
+        
+        // 查询图谱
+        async function queryGraph() {
+            const query = document.getElementById('query-input').value.trim();
+            if (!query) {
+                alert('请输入查询语句');
+                return;
+            }
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ 查询中...';
+            
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                const result = await response.json();
+                
+                if (result.results) {
+                    displayQueryResults(result);
+                } else {
+                    showError('查询失败: ' + result.error);
+                }
+                
+            } catch (error) {
+                showError('请求失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 执行查询';
+            }
+        }
+        
+        // 显示查询结果
+        function displayQueryResults(result) {
+            const resultsDiv = document.getElementById('query-results');
+            const displayDiv = document.getElementById('query-display');
+            
+            displayDiv.innerHTML = '<pre>' + JSON.stringify(result.results, null, 2) + '</pre>';
+            resultsDiv.style.display = 'block';
+        }
+        
+        // 保存图谱
+        async function saveGraph() {
+            try {
+                const response = await fetch('/api/save', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(result.message);
+                } else {
+                    showError('保存失败: ' + result.error);
+                }
+                
+            } catch (error) {
+                showError('请求失败: ' + error.message);
+            }
+        }
+        
+        // 加载图谱
+        async function loadGraph() {
+            try {
+                const response = await fetch('/api/load', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(result.message);
+                    loadStatus(); // 刷新状态
+                } else {
+                    showError('加载失败: ' + result.error);
+                }
+                
+            } catch (error) {
+                showError('请求失败: ' + error.message);
+            }
+        }
+        
+        // 显示错误信息
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            document.querySelector('.main-content').appendChild(errorDiv);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+        
+        // 显示成功信息
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.textContent = message;
+            document.querySelector('.main-content').appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+        
+        // 页面加载时自动加载状态
+        window.onload = function() {
+            loadStatus();
+        };
+    </script>
+</body>
+</html>

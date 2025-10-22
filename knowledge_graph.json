@@ -1,0 +1,44 @@
+{
+  "nodes": [
+    {
+      "id": "entity_1",
+      "name": "人工智能",
+      "type": "技术",
+      "properties": {
+        "category": "AI"
+      }
+    },
+    {
+      "id": "entity_2",
+      "name": "机器学习",
+      "type": "技术",
+      "properties": {
+        "category": "ML"
+      }
+    },
+    {
+      "id": "entity_3",
+      "name": "深度学习",
+      "type": "技术",
+      "properties": {
+        "category": "DL"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "relation_1",
+      "source": "entity_1",
+      "target": "entity_2",
+      "relation_type": "相关",
+      "properties": {
+        "strength": 0.8
+      }
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-10-22T09:24:05.282573",
+    "entity_count": 3,
+    "relation_count": 1
+  }
+}
